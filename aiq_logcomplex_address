@@ -1,0 +1,28 @@
+input {
+  file  {
+    path => "/home/delta01/smarthome/2021-08/*.log"
+    sincedb_path => "/dev/null"
+    start_position => "beginning"
+  }
+}
+filter {
+        grok { match => { "message" => ['(receiveAMQPFrom)+(?<service>[^"]+)\b.+?"type\W+(?<type>[^"]+).+?"address\W+(?<address>[^"]+).+?"complex\W+(?<complex>[^"]+)',
+                                        '(receiveAMQPFrom)+(?<service>[^"]+)\b.+?"type\W+(?<type>[^"]+).+?"complex\W+(?<complex>[^"]+).+?"address\W+(?<address>[^"]+)'
+                                        ] }}
+        mutate { add_field => { "aptaddress" => "%{complex}%{address}" } }
+}
+
+output {
+    if [complex] =~ /.+/ {
+                elasticsearch {
+                        hosts => ["http://203.245.157.103:9200"]
+                        index => "bg_idx_smarthome_mobile_service_usage_202108_1"
+                        user =>"elastic"
+                        password => "poscoenc!"
+                }
+                csv {
+                        fields => ["service", "type", "complex" , "address"]
+                        path => "/home/delta01/smarthome/bg_mobile_app_service_202108_01.csv"
+                }
+        }
+}
